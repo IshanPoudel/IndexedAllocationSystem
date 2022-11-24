@@ -12,6 +12,9 @@
 
 
 //How to have inodes for all 
+//Associate each file name with a index number
+//Have 2d arrays. At the index number , it ocntains all the file indexes for each of the index nodes.
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -19,35 +22,135 @@
 #include <string.h>
 
 
+
 #define NUM_BLOCKS 512
 #define BLOCK_SIZE 1024
+#define MAX_NUM_OF_BLOCKS_PER_FILE 20
+#define MAX_NUM_OF_FILES 125
 
 char file_data[NUM_BLOCKS][BLOCK_SIZE];
+
+struct Node 
+{
+    char *name;
+    int blocks[MAX_NUM_OF_BLOCKS_PER_FILE];
+    int in_use;
+
+};
+
+//decalre an array to store inodes
+struct Node inode_array_ptr[MAX_NUM_OF_FILES];
+
+
+
+
+void initialize()
+{
+    //initialize the directory.
+    for(int i=0; i<NUM_BLOCKS;i++)
+    {
+        // file_data[i]=strdup("NULL");
+        strcpy(file_data[i] , "");
+        
+        
+    }
+    //Set some blocks as not free for testing.
+    strcpy(file_data[5] , "TEST");
+    strcpy(file_data[10] , "TEST");
+    strcpy(file_data[7] , "TEST");
+
+
+    //Initialize the inode_array_ptr
+    for (int i=0; i<MAX_NUM_OF_FILES;i++)
+    {
+        inode_array_ptr[i].in_use=0;
+    }
+}
+
+
+
 
 
 int findFreeBlock()
 {
     //itwrate thorugh out file_data and see which one is empty . 
-    return 0;
+
+    for(int i=5; i<NUM_BLOCKS;i++)
+    {
+        if ( strcmp(file_data[i] , "") ==0)
+        {
+            printf("I found a free block at %dth index\n" , i);
+            return i;
+
+        }
+        
+    }
+    return -1;
 
     
 }
 
+int findFreeInodeBlock()
+{
+    for (int i=0; i<MAX_NUM_OF_FILES;i++)
+    {
+        if (inode_array_ptr[i].in_use==0)
+        {
+            printf("Found a free_inode block at %d\n" , i);
+            return 1;
+        }
+
+    }
+    return -1;
+}
+
 void printBlock()
 {
+    printf("I am here\n");
 
-    for(int i=0; i>NUM_BLOCKS;i++)
+    
+
+    for(int i=0; i<NUM_BLOCKS;i++)
     {
         // file_data[i]=strdup("NULL");
-        strcpy(file_data[i] , "NULL");
+        strcpy(file_data[i] , "");
+        
         printf("%s\n" , file_data[i]);
     }
 
     return;
 
 }
+
+void printInodeBlock()
+{
+
+  printf("\n\nContents of the  Inode Block\n\n");
+    
+
+    
+
+    for(int i=0; i<MAX_NUM_OF_FILES;i++)
+    {
+      if (inode_array_ptr[i].in_use==1)
+      {
+        printf("%s\n" , inode_array_ptr[i].name);
+
+      }
+       
+        
+    }
+
+    return;
+
+}
+
 int main(int argc , char *argv[])
 {
+
+    initialize();
+
+    
 
     
 
@@ -72,6 +175,14 @@ int main(int argc , char *argv[])
     {
        //We get the paramwters of the file.
        //We read from the input file.
+       
+       int inode_block_index = findFreeInodeBlock();
+       inode_array_ptr[inode_block_index].in_use =1;
+       inode_array_ptr[inode_block_index].name = strdup(argv[2]);
+       printf("The name of the file is %s\n" , inode_array_ptr[inode_block_index].name );
+
+
+       
        FILE *ifp = fopen(argv[1] , "r");
        printf("Reading %d bytes from %s\n" , (int) buf.st_size , argv[1]);
 
@@ -88,7 +199,7 @@ int main(int argc , char *argv[])
        int offset = 0;
        
        //nlock_index will keep us pointin to the area that we will read from or write to
-       int block_index=0;
+       int block_index = findFreeBlock();
 
 
        while(copy_size>0)
@@ -114,7 +225,7 @@ int main(int argc , char *argv[])
         offset+= BLOCK_SIZE;
 
         //INcrement the index into block array
-        block_index++;
+        block_index=findFreeBlock();
 
         
 
@@ -124,10 +235,9 @@ int main(int argc , char *argv[])
        fclose(ifp);
 
        //The above function is the put command , reading from file and storing in you array
-
+    //    ------------------------------------------------------
        //the function below is to open a new output file and write the same data to. 
-       FILE *ofp;
-       ofp = fopen(argv[2] , "w");
+       FILE *ofp = fopen(argv[2] , "w");
 
        if(ofp==NULL)
        {
