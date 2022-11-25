@@ -245,6 +245,8 @@ void put(char* input , char* output)
 
     int offset = 0;
     int block_index = findFreeBlock();
+
+    //nEED TO COPY TO DIFFERENT FILE FORMATS. 
     
 
   }
