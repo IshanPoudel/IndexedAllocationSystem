@@ -135,7 +135,7 @@ int findFreeInodeBlock()
         if (inode_array_ptr[i].in_use==0)
         {
             printf("I found a free inode block at %dth index to put my file name and array\n" , i);
-            return 1;
+            return i;
         }
 
     }
@@ -185,16 +185,23 @@ void printInodeBlock()
 
     
 
-    // for(int i=0; i<MAX_NUM_OF_FILES;i++)
-    // {
-    //   if (inode_array_ptr[i].in_use==1)
-    //   {
-    //     printf("%s\n" , inode_array_ptr[i].name);
+    for(int i=0; i<MAX_NUM_OF_FILES;i++)
+    {
+      if (inode_array_ptr[i].in_use==1)
+      {
+        printf("\nFor inode at index %d \n" , i);
+        //Get size of array
+        int size = sizeof(inode_array_ptr[i].blocks)/sizeof(inode_array_ptr[i].blocks[0]);
+        for (int j=0; j<size;j++)
+        {
+          printf(" %d " , inode_array_ptr[i].blocks[j]);
+        }
 
-    //   }
+      }
        
         
-    // }
+    }
+    printf("\n");
 
     return;
 
@@ -208,14 +215,15 @@ void printDirectory()
   {
     if (directory_entry_array[i].in_use==1)
     {
-      printf("%s\n" , directory_entry_array[i].name);
+      printf("Name :%s , Inode Number: %d \n" , directory_entry_array[i].name , directory_entry_array[i].inode_index);
     }
   }
+  printf("\n");
 }
 
 void put(char* input , char* output)
 {
-  printf("\nI am trying to put the contents of %s into %s \n" , input , output);
+  printf("\n I am trying to put the contents of %s into %s \n" , input , output);
 
   //declare variables
   int status;
@@ -229,14 +237,15 @@ void put(char* input , char* output)
     int dir_index = findFreeDirectoryBlock();
     directory_entry_array[dir_index].in_use=1;
     directory_entry_array[dir_index].name=strdup(output);
-    printDirectory();
+   
 
     //Find free inode block
 
     int inode_index = findFreeInodeBlock();
     //Link the directory with the inode struct.
     directory_entry_array[dir_index].inode_index=inode_index;
-    inode_array_ptr[inode_index].in_use=1;
+    printf("I made the index at %d in the inode_array_ptr in use\n" , inode_index);
+    inode_array_ptr[inode_index].in_use = 1;
 
     FILE *ifp = fopen(input , "r");
     printf("Reading %d bytes from %s\n" , (int) buf.st_size , input);
@@ -247,6 +256,53 @@ void put(char* input , char* output)
     int block_index = findFreeBlock();
 
     //nEED TO COPY TO DIFFERENT FILE FORMATS. 
+
+    int inode_block_counter = 0;
+    //To increment struct inode's block array when a new block is read.
+
+    while (copy_size>0)
+    {
+       fseek( ifp, offset, SEEK_SET );
+
+       //Read block_size and put it in the file
+       int bytes  = fread( file_data[block_index], BLOCK_SIZE, 1, ifp );
+
+       if(bytes==0 && !feof (ifp))
+       {
+        printf("An error occured reading from the input file.\n");
+        return;
+       }
+
+       //At this point , add the block index to the inode.
+       //Need a pointer to know how many blocks are needed.
+       //Make sure that the block_index is free. 
+      //  printf("i read from the file and added the block index %d at the struct.array ar position %d\n" , block_index , inode_block_counter);
+       inode_array_ptr[inode_index].blocks[inode_block_counter]=block_index;
+       inode_block_counter++;
+
+
+       //clear the eof flag.
+       clearerr(ifp);
+
+       //Reduce block_copy size.
+       copy_size-=BLOCK_SIZE;
+
+       offset += BLOCK_SIZE;
+
+       block_index=findFreeBlock();
+
+
+
+    }
+
+    fclose(ifp);
+
+    printf("\nCurrent state:\n");
+    printDirectory();
+
+    printInodeBlock();
+
+    
     
 
   }
