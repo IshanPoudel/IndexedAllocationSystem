@@ -162,16 +162,23 @@ int findFreeDirectoryBlock()
 void printBlock()
 {
 
-  printf("\n\nContents of the Block\n\n");
+  printf("\n\nThe following block indexes are occupied.\n\n");
     
 
     
 
     for(int i=0; i<NUM_BLOCKS;i++)
     {
+      if (strcmp(file_data[i] , "")!=0)
+      {
+        printf(" %d " , i);
+
+      }
        
-        printf("%s\n" , file_data[i]);
+       
     }
+
+    printf("\n");
 
     return;
 
@@ -314,6 +321,71 @@ void put(char* input , char* output)
 
 }
 
+
+void del(char *filename)
+{
+  //You get the name of the file 
+
+  int inode_to_del = -1;
+  for (int i=0; i<MAX_NUM_OF_FILES;i++)
+  {
+    if (directory_entry_array[i].in_use == 1)
+    {
+      if (strcmp(directory_entry_array[i].name , filename)==0)
+      {
+        //If you find a match , get the inode_number so we can delete it from the inode struct array
+        inode_to_del=directory_entry_array[i].inode_index;
+        //Set the direcotry to be usable again.
+        directory_entry_array[i].in_use=0;
+        break;
+        
+      }
+    }
+  }
+
+  //if traversed through the file , and the file not found
+  if (inode_to_del==-1)
+  {
+    printf("File not found\n");
+    return;
+  }
+
+  
+
+  //Get the inode number.
+  //Make sure to set it in use.
+  inode_array_ptr[inode_to_del].in_use=0;
+
+   //Traverse the directory block .
+  //Set all the block to zero or ""
+
+  
+
+  //Reset all the blocks to zero.
+  for (int j=0; j<MAX_NUM_OF_BLOCKS_PER_FILE;j++)
+  {
+    //Get the index of the block. If not zero , then it is a block_number which we must delete.
+    //It contains a block we must free
+    // [2 ,3 ,  4, 5 , 8 , 0 , 0 , 0 , 0 ]
+    if(inode_array_ptr[inode_to_del].blocks[j]!=0)
+    {
+
+      strcpy(file_data[inode_array_ptr[inode_to_del].blocks[j]] ,"" );
+
+      //set the block to zero for further use.
+      inode_array_ptr[inode_to_del].blocks[j]=0;
+      //[0 , 3 , 4 , 5 , 8 , 0 , 0 , 0 ,0]
+
+    }
+  }
+
+  printf("\n\n After deleting\n\n");
+  printDirectory();
+  printInodeBlock();
+  printBlock();
+
+ 
+}
 int main()
 {
 
@@ -376,6 +448,11 @@ int main()
     if (strcmp(token[0] , "put")==0)
     {
       put( token[1] , token[2]);
+    }
+
+    else if (strcmp(token[0] , "del")==0)
+    {
+      del(token[1]);
     }
 
     free( working_root );
