@@ -57,6 +57,8 @@ struct directory_entry
   int inode_index;
   int size;
   int valid;
+  int hidden;  //if hidden = 1, it is hidden
+  int read_only; //if read_only=1 , it is read only.
 };
 
 //Manually increase the size of the directory . 
@@ -278,6 +280,10 @@ void put(char* input )
     directory_entry_array[dir_index].name=strdup(output);
     directory_entry_array[dir_index].size = (int) buf.st_size;
 
+    //set read_only and hidden to false by default.
+    directory_entry_array[dir_index].hidden=0;
+    directory_entry_array[dir_index].read_only=0;
+
     //Once you find a free directory block, check if it;s index node has not been freed yet.
     //Use a valid flag. Set it to 1 if it has been deleted. 
     // If you use it , set valid to zero such that it's files are still in use
@@ -497,6 +503,12 @@ void del(char *filename)
     {
       if (strcmp(directory_entry_array[i].name , filename)==0)
       {
+        //check if read_only
+        if (directory_entry_array[i].read_only==1)
+        {
+          printf("Cannot delete file . It is read only\n");
+          return;
+        }
         //If you find a match , get the inode_number so we can delete it from the inode struct array
         inode_to_del=directory_entry_array[i].inode_index;
         //Set the direcotry to be usable again.
@@ -583,19 +595,74 @@ void undel(char *filename)
   return;
 }
 
+
+void printdf()
+{
+  //print total free memory. 
+  int total = NUM_BLOCKS* BLOCK_SIZE;
+
+  for (int i=0; i<MAX_NUM_OF_FILES;i++)
+  {
+    if (directory_entry_array[i].in_use==1)
+    {
+      total = total - directory_entry_array[i].size;
+    }
+  }
+
+  printf("%d bytes free\n" , total);
+}
 void list ()
 {
   //List all the files. 
 
   for (int i=0; i<MAX_NUM_OF_FILES ; i++)
   {
-    if (directory_entry_array[i].in_use==1)
+    if (directory_entry_array[i].in_use==1 && directory_entry_array[i].hidden!=1)
     {
       printf("%d  %s \n" , directory_entry_array[i].size , directory_entry_array[i].name);
     }
   }
 }
 
+void setAttribute(char* flag , char *filename)
+{
+
+  //find the filename and change it in the directory
+  
+  for (int i=0; i<MAX_NUM_OF_FILES;i++)
+  {
+    if (directory_entry_array[i].in_use==1 && strcmp(directory_entry_array[i].name , filename)==0)
+    {
+      if (strcmp(flag , "+h")==0)
+      {
+        
+        directory_entry_array[i].hidden=1;
+        printf("Set %s to be hidden\n" , filename);
+
+      }
+      else if (strcmp(flag , "-h")==0)
+      {
+        directory_entry_array[i].hidden=0;
+        printf("Set %s to be un-hidden\n" , filename);
+
+      }
+      else if(strcmp(flag , "+r")==0)
+      {
+        directory_entry_array[i].read_only=1;
+        printf("Set %s to be read only\n" , filename);
+      }
+      else
+      {
+        directory_entry_array[i].read_only=0;
+        printf("Set %s to be not just read only\n" , filename);
+
+      }
+    }
+  }
+
+
+
+}
 int main()
 {
 
@@ -681,9 +748,29 @@ int main()
     {
       printDirectory();
     }
+    else if (strcmp(token[0] , "df")==0)
+    {
+      printdf();
+    }
+    else if (strcmp(token[0] , "attrib")==0)
+    {
+      
+      if ((strcmp(token[1] , "+h")==0 ) || (strcmp(token[1] , "+r")==0) || (strcmp(token[1] , "-h")==0 ) || (strcmp(token[1] , "-r")==0) )
+      {
+        setAttribute(token[1] , token[2]  );
+
+      }
+    
+      else
+      {
+        printf("Wrong attribute\n");
+      }
+    }
 
     free( working_root );
 
   }
   return 0;
 }
+
+//Del a file , undel it and then put it .
