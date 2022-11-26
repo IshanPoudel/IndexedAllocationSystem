@@ -56,6 +56,7 @@ struct directory_entry
   int in_use;
   int inode_index;
   int size;
+  int valid;
 };
 
 //Manually increase the size of the directory . 
@@ -215,15 +216,40 @@ void printInodeBlock()
 
 }
 
+void printInode(int index)
+{
+  
+  printf("\nFor inode at index %d \n" , index);
+  
+  int size = sizeof(inode_array_ptr[index].blocks)/sizeof(inode_array_ptr[index].blocks[0]);
+  for (int j=0; j<MAX_NUM_OF_BLOCKS_PER_FILE;j++)
+  {
+    printf(" %d " , inode_array_ptr[index].blocks[j]);
+  }
+  printf("\n\n");
+
+}
+
 void printDirectory()
 {
   printf("\n\nContents of the directory block\n\n");
 
   for (int i=0; i<MAX_NUM_OF_FILES;i++)
   {
-    if (directory_entry_array[i].in_use==1)
+    if (directory_entry_array[i].valid==1)
     {
-      printf("Name :%s , Inode Number: %d \n" , directory_entry_array[i].name , directory_entry_array[i].inode_index);
+      printf("Deleted , but the file is still not overwritten\n");
+      printf("Name :%s , Inode Number: %d \n" , directory_entry_array[i].name , directory_entry_array[i].inode_index);   
+      printInode(directory_entry_array[i].inode_index); 
+    }
+    else if (directory_entry_array[i].in_use==1)
+    {
+      
+      printf("Name :%s , Inode Number: %d \n" , directory_entry_array[i].name , directory_entry_array[i].inode_index);       
+      printInode(directory_entry_array[i].inode_index);
+    }
+    else{
+
     }
   }
   printf("\n");
@@ -251,6 +277,39 @@ void put(char* input )
     directory_entry_array[dir_index].in_use=1;
     directory_entry_array[dir_index].name=strdup(output);
     directory_entry_array[dir_index].size = (int) buf.st_size;
+
+    //Once you find a free directory block, check if it;s index node has not been freed yet.
+    //Use a valid flag. Set it to 1 if it has been deleted. 
+    // If you use it , set valid to zero such that it's files are still in use
+    if (directory_entry_array[dir_index].valid==1)
+    {
+      int inode_to_del = directory_entry_array[dir_index].inode_index;
+      // you are using a directory which has been removed once.
+      //first remove the block from it's corresponding inode.
+      //Then do your stuff.
+      for (int j=0; j<MAX_NUM_OF_BLOCKS_PER_FILE;j++)
+      {
+        //Get the index of the block. If not zero , then it is a block_number which we must delete.
+        //It contains a block we must free
+        // [2 ,3 ,  4, 5 , 8 , 0 , 0 , 0 , 0 ]
+        if(inode_array_ptr[inode_to_del].blocks[j]!=0)
+        {
+          //remove the files.
+          strcpy(file_data[inode_array_ptr[inode_to_del].blocks[j]] ,"" );
+
+          //set the block to zero for further use.
+          inode_array_ptr[inode_to_del].blocks[j]=0;
+          //[0 , 3 , 4 , 5 , 8 , 0 , 0 , 0 ,0]
+
+        }
+      }
+
+      //reset the valid.
+      directory_entry_array[dir_index].valid=0;
+      
+
+    }
+    
    
 
     //Find free inode block
@@ -314,7 +373,7 @@ void put(char* input )
     printf("\nCurrent state:\n");
     printDirectory();
 
-    printInodeBlock();
+    
 
     
     
@@ -461,35 +520,80 @@ void del(char *filename)
   //Make sure to set it in use.
   inode_array_ptr[inode_to_del].in_use=0;
 
-   //Traverse the directory block .
+  directory_entry_array[inode_to_del].valid = 1;
+  //Aka it still can be used because the only thing that has been done is change in_use to 0.
+
+
+  //Traverse the directory block .
   //Set all the block to zero or ""
 
   
 
-  //Reset all the blocks to zero.
-  for (int j=0; j<MAX_NUM_OF_BLOCKS_PER_FILE;j++)
-  {
-    //Get the index of the block. If not zero , then it is a block_number which we must delete.
-    //It contains a block we must free
-    // [2 ,3 ,  4, 5 , 8 , 0 , 0 , 0 , 0 ]
-    if(inode_array_ptr[inode_to_del].blocks[j]!=0)
-    {
+  // //Reset all the blocks to zero.
+  // for (int j=0; j<MAX_NUM_OF_BLOCKS_PER_FILE;j++)
+  // {
+  //   //Get the index of the block. If not zero , then it is a block_number which we must delete.
+  //   //It contains a block we must free
+  //   // [2 ,3 ,  4, 5 , 8 , 0 , 0 , 0 , 0 ]
+  //   if(inode_array_ptr[inode_to_del].blocks[j]!=0)
+  //   {
 
-      strcpy(file_data[inode_array_ptr[inode_to_del].blocks[j]] ,"" );
+  //     strcpy(file_data[inode_array_ptr[inode_to_del].blocks[j]] ,"" );
 
-      //set the block to zero for further use.
-      inode_array_ptr[inode_to_del].blocks[j]=0;
-      //[0 , 3 , 4 , 5 , 8 , 0 , 0 , 0 ,0]
+  //     //set the block to zero for further use.
+  //     inode_array_ptr[inode_to_del].blocks[j]=0;
+  //     //[0 , 3 , 4 , 5 , 8 , 0 , 0 , 0 ,0]
 
-    }
-  }
+  //   }
+  // }
+  
+  // instead reset all the blocks to zero before you are adding it to the inode. 
 
   printf("\n\n After deleting\n\n");
   printDirectory();
-  printInodeBlock();
-  printBlock();
+  
 
  
+}
+
+void undel(char *filename)
+{
+
+  
+
+  for (int i=0; i<MAX_NUM_OF_FILES;i++)
+  {
+    if (( (directory_entry_array[i].valid==1) && strcmp(directory_entry_array[i].name , filename) == 0 )   && (directory_entry_array[i].in_use!=1))
+    {
+      //File can be restored.
+      printf("I found the file %s\n" , filename);
+
+      directory_entry_array[i].in_use=1;
+      //change the valid sign to anything else than a 1.
+      directory_entry_array[i].valid=0;
+      //make the inode also in use
+      int inode = directory_entry_array[i].inode_index;
+      inode_array_ptr[inode].in_use=1;
+      printf("%s has been restored\n" , filename);
+      return;
+    }
+  }
+
+  printf("File not found for deletetion\n");
+  return;
+}
+
+void list ()
+{
+  //List all the files. 
+
+  for (int i=0; i<MAX_NUM_OF_FILES ; i++)
+  {
+    if (directory_entry_array[i].in_use==1)
+    {
+      printf("%d  %s \n" , directory_entry_array[i].size , directory_entry_array[i].name);
+    }
+  }
 }
 
 int main()
@@ -545,7 +649,7 @@ int main()
     int token_index  = 0;
     for( token_index = 0; token_index < token_count; token_index ++ ) 
     {
-      printf("token[%d] = %s\n", token_index, token[token_index] );  
+      // printf("token[%d] = %s\n", token_index, token[token_index] );  
      
 
       
@@ -564,6 +668,18 @@ int main()
     else if (strcmp(token[0] , "get")==0)
     {
       get(token , token_count);
+    }
+    else if (strcmp(token[0] , "list")==0)
+    {
+      list();
+    }
+    else if (strcmp(token[0] , "undel")==0)
+    {
+      undel(token[1]);
+    }
+    else if (strcmp(token[0] , "print")==0)
+    {
+      printDirectory();
     }
 
     free( working_root );
