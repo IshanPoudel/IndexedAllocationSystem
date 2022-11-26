@@ -19,3 +19,9 @@
 //And the inode[0].blocks[] contains all the blocks that make up the file. 
 // inode[0].size holds the filesize, inode[0].date … etc
 
+
+//Have a struct of inodes. 
+//Whenever a file is read , fill the inode struct. 
+//Inode.name = filename
+//Inode.block = int array block which contains all the blocks
+//Inode.in_use = 1/0 which contains all the required blocks.
