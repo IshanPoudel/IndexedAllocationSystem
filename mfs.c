@@ -42,8 +42,8 @@
 #define MAX_NUM_ARGUMENTS 5     // Mav shell only supports five arguments
 
 
-#define NUM_BLOCKS 512
-#define BLOCK_SIZE 1024
+#define NUM_BLOCKS 4226
+#define BLOCK_SIZE 512
 #define MAX_NUM_OF_BLOCKS_PER_FILE 20
 #define MAX_NUM_OF_FILES 125
 
@@ -89,10 +89,10 @@ void initialize()
     strcpy(file_data[i] , "");
   }
 
-//Set some blocks as not free for testing.
-  strcpy(file_data[5] , "TEST");
-  strcpy(file_data[10] , "TEST");
-  strcpy(file_data[7] , "TEST");
+// //Set some blocks as not free for testing.
+//   strcpy(file_data[5] , "TEST");
+//   strcpy(file_data[10] , "TEST");
+//   strcpy(file_data[7] , "TEST");
 
 
   //Initialize the inode_array_ptr
@@ -111,7 +111,8 @@ void initialize()
 }
 
 
-
+int open = 0;
+char * currentFileSystem;
 
 int findFreeBlock()
 {
@@ -611,6 +612,7 @@ void printdf()
 
   printf("%d bytes free\n" , total);
 }
+
 void list ()
 {
   //List all the files. 
@@ -657,18 +659,63 @@ void setAttribute(char* flag , char *filename)
         printf("Set %s to be not just read only\n" , filename);
 
       }
+
+      return;
     }
+    
   }
+
+  printf("attrib: File not found\n");
+
 
 
 
 }
+
+
+void createfs(char *fileSystemName)
+{
+  initialize();
+  open=1;
+  currentFileSystem= fileSystemName;
+
+}
+
+void savefs()
+{
+  //Save the data. 
+  
+  //Open the data.
+  //Save the data.
+  // FILE *fp = fopen()
+  // fwrite( &file_data[0], 8192, 4226, fp );
+  FILE *fp = fopen(currentFileSystem , "w");
+  printf("I opened the file %s \n" , currentFileSystem);
+  fwrite( &file_data[0], 8192, 4226, fp );
+  fclose(fp);
+  return;
+}
+
+void openFileSystem(char *fileName)
+{
+  //Load the file name .
+  //Initilaize the data file.
+  FILE *fp = fopen(fileName , "r");
+  fread( &file_data[0], 8192, 4226, fp );
+  printf("I read the file: %s\n" , fileName);
+  open=1;
+  printBlock();
+  return;
+
+}
+
+
 int main()
 {
 
   char * cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
 
-  initialize();
+  
 
   while( 1 )
   {
@@ -722,7 +769,26 @@ int main()
       
     }
 
-    if (strcmp(token[0] , "put")==0)
+    if (strcmp(token[0] , "createfs")==0)
+    {
+       createfs(token[1]);
+    }
+    else if(strcmp(token[0] , "openfs")==0)
+    {
+      openFileSystem(token[1]);
+    }
+
+    else if (open==0)
+    {
+      printf("No file system selected\n");
+      
+    }
+    else if (strcmp(token[0] , "savefs")==0)
+    {
+      savefs();
+    }
+
+    else if (strcmp(token[0] , "put")==0)
     {
       put( token[1] );
     }
