@@ -120,6 +120,21 @@ void initialize()
 //When you save and open , initialize the directory_entry_array with the output. 
 //When you save and open, initialize the inode_array_ptr with the data file.
 
+int getdf()
+{
+  //print total free memory. 
+  int total = NUM_BLOCKS* BLOCK_SIZE;
+
+  for (int i=0; i<MAX_NUM_OF_FILES;i++)
+  {
+    if (directory_entry_array[i].in_use==1)
+    {
+      total = total - directory_entry_array[i].size;
+    }
+  }
+
+  return total;
+}
 
 int findFreeBlock()
 {
@@ -279,6 +294,23 @@ void put(char* input )
   struct stat buf;
 
   status = stat(input , &buf);
+  int size =(int) buf.st_size ;
+  int free_size = getdf();
+
+//   printf("Size of the file is: %d\n" , size);
+//   printf("Free size is : %d\n" , free_size);
+
+  if (free_size<size)
+  {
+    printf("put error: Not enough disk space\n");
+    return;
+  }
+
+  if (strlen(input)>32)
+  {
+    printf("put error: File name too long\n");
+    return;
+  }
 
   if (status!=-1)
   {
@@ -385,8 +417,8 @@ void put(char* input )
 
     fclose(ifp);
 
-    printf("\nCurrent state:\n");
-    printDirectory();
+    // printf("\nCurrent state:\n");
+    // printDirectory();
 
     
 
