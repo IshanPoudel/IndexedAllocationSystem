@@ -444,7 +444,7 @@ void get(char** token , int token_count)
 {
   
   //See number of args , before doing stuff.
-  printf("%d\n" , token_count);
+//   printf("%d\n" , token_count);
   //Need to check if string not empty
   char *input_file = token[1];
   char *output_file;
@@ -460,24 +460,35 @@ void get(char** token , int token_count)
 
   //Now do your thing.
   //Read the file from the inode.
+  
+  //check if inode_file exists. 
 
   //Get the inode. 
+//   printf("The input file name is %s\n" , input_file );
   int inode_index=-1;
   int file_size=0;
+//   printf("i am done\n");
   for (int i=0; i<MAX_NUM_OF_FILES;i++)
   {
-    if (strcmp(directory_entry_array[i].name , input_file)==0)
+    if (directory_entry_array[i].in_use==1)
     {
-      inode_index=directory_entry_array[i].inode_index;
-      file_size = directory_entry_array[i].size;
-      break;
+        if (strcmp(directory_entry_array[i].name , input_file)==0)
+        {
+        // printf("i found the file %s\n" , input_file);
+        inode_index=directory_entry_array[i].inode_index;
+        file_size = directory_entry_array[i].size;
+        break;
+
+        }
 
     }
+    
   }
+ 
 
   if (inode_index==-1)
   {
-    printf("File not in disk");
+    printf("File not in disk\n");
     return;
   }
 
