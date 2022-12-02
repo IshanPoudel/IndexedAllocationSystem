@@ -30,6 +30,8 @@
 #include <string.h>
 #include <signal.h>
 #include <sys/stat.h>
+#include <time.h>
+
 
 
 #define WHITESPACE " \t\n"      // We want to split our command line up into tokens
@@ -42,12 +44,11 @@
 #define MAX_NUM_ARGUMENTS 5     // Mav shell only supports five arguments
 
 
+
 #define NUM_BLOCKS 4226
-#define BLOCK_SIZE 512
-#define MAX_NUM_OF_BLOCKS_PER_FILE 20
+#define BLOCK_SIZE 8192
+#define MAX_NUM_OF_BLOCKS_PER_FILE 32
 #define MAX_NUM_OF_FILES 125
-
-
 
 //contains file name and their inode number
 struct directory_entry
@@ -59,15 +60,15 @@ struct directory_entry
   int valid;
   int hidden;  //if hidden = 1, it is hidden
   int read_only; //if read_only=1 , it is read only.
+  time_t time;
 };
 
-//Manually increase the size of the directory . 
+
 struct directory_entry directory_entry_array[MAX_NUM_OF_FILES];
 
 //contains the inode number and the number of blocks that it is using.
 struct Node 
 {
-    
     int blocks[MAX_NUM_OF_BLOCKS_PER_FILE];
     int in_use;
 
@@ -76,9 +77,15 @@ struct Node
 //decalre an array to store inodes
 struct Node inode_array_ptr[MAX_NUM_OF_FILES];
 
+
 //declare a directory to store the blocks.
 
 char file_data[NUM_BLOCKS][BLOCK_SIZE];
+
+
+int open = 0;
+char * currentFileSystem;
+FILE* open_file;
 
 
 void initialize()
@@ -110,9 +117,9 @@ void initialize()
   }
 }
 
+//When you save and open , initialize the directory_entry_array with the output. 
+//When you save and open, initialize the inode_array_ptr with the data file.
 
-int open = 0;
-char * currentFileSystem;
 
 int findFreeBlock()
 {
@@ -280,6 +287,7 @@ void put(char* input )
     directory_entry_array[dir_index].in_use=1;
     directory_entry_array[dir_index].name=strdup(output);
     directory_entry_array[dir_index].size = (int) buf.st_size;
+    directory_entry_array[dir_index].time=time(NULL);
 
     //set read_only and hidden to false by default.
     directory_entry_array[dir_index].hidden=0;
@@ -616,13 +624,24 @@ void printdf()
 void list ()
 {
   //List all the files. 
+  int empty=0;
 
   for (int i=0; i<MAX_NUM_OF_FILES ; i++)
   {
     if (directory_entry_array[i].in_use==1 && directory_entry_array[i].hidden!=1)
     {
-      printf("%d  %s \n" , directory_entry_array[i].size , directory_entry_array[i].name);
+      empty=1;
+
+      char *time = ctime( &directory_entry_array[i].time);
+      int size = strlen(time);
+      time[size-1]='\0';
+      printf("%d %s  %s \n" , directory_entry_array[i].size , time , directory_entry_array[i].name);
     }
+  }
+
+  if (empty==0)
+  {
+    printf("No files found\n");
   }
 }
 
@@ -672,26 +691,40 @@ void setAttribute(char* flag , char *filename)
 
 }
 
-
 void createfs(char *fileSystemName)
 {
+
   initialize();
   open=1;
   currentFileSystem= fileSystemName;
+  
 
 }
 
 void savefs()
 {
   //Save the data. 
-  
+  // //Need to make the file block[0] equal to dir entry array
+  // //Store as json. 
+  // char dir_entry_text[BLOCK_SIZE];
+  // for (int i=0; i<directory_entry_array;i++)
+  // {
+    
+
+
+  // }
+
+
+  //Need to make file block[2] and [3] equal to dir entry.
+
   //Open the data.
   //Save the data.
   // FILE *fp = fopen()
   // fwrite( &file_data[0], 8192, 4226, fp );
   FILE *fp = fopen(currentFileSystem , "w");
   printf("I opened the file %s \n" , currentFileSystem);
-  fwrite( &file_data[0], 8192, 4226, fp );
+  fwrite( &file_data[0], BLOCK_SIZE, NUM_BLOCKS, fp );
+  printf("i saved the file %s\n" , currentFileSystem);
   fclose(fp);
   return;
 }
@@ -701,17 +734,41 @@ void openFileSystem(char *fileName)
   //Load the file name .
   //Initilaize the data file.
   FILE *fp = fopen(fileName , "r");
-  fread( &file_data[0], 8192, 4226, fp );
+  fread( &file_data[0], BLOCK_SIZE, NUM_BLOCKS, fp );
+  open_file=fp;
   printf("I read the file: %s\n" , fileName);
+  currentFileSystem=fileName;
+
+  //Initializae the inode and the direcotry entry array.
   open=1;
   printBlock();
   return;
 
 }
 
+void closeFileSystem()
+{
+  fclose(open_file);
+  open=0;
+  open_file=NULL;
+  currentFileSystem=NULL;
+  initialize();
+
+
+}
+
 
 int main()
 {
+  printf ("Full Directory_entry_array: %d\n" , (int)sizeof(directory_entry_array));
+  printf("Single directory_entry_array value: %d\n" , (int)sizeof(directory_entry_array[0]));
+  printf("Full inode_array: %d \n" , (int)sizeof(inode_array_ptr));
+  printf("Single inode_array  value: %d \n" , (int)sizeof(inode_array_ptr[0]));
+  printf("File data: %d\n" , (int)sizeof(file_data));
+  printf("Single block in file_data: %d\n" , (int)sizeof(file_data[0]));
+
+
+
 
   char * cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
 
@@ -771,11 +828,31 @@ int main()
 
     if (strcmp(token[0] , "createfs")==0)
     {
-       createfs(token[1]);
+      
+      if (token[1] == NULL )
+      {
+        printf("Need two arguments.\n");
+      }
+      else
+      {
+        createfs(token[1]);
+
+      }
+      
+       
     }
     else if(strcmp(token[0] , "openfs")==0)
     {
-      openFileSystem(token[1]);
+      if (token[1] == NULL )
+      {
+        printf("Need two arguments.\n");
+      }
+      else
+      {
+        openFileSystem(token[1]);
+
+      }
+      
     }
 
     else if (open==0)
@@ -786,6 +863,10 @@ int main()
     else if (strcmp(token[0] , "savefs")==0)
     {
       savefs();
+    }
+    else if (strcmp(token[0] , "closefs")==0)
+    {
+      closeFileSystem();
     }
 
     else if (strcmp(token[0] , "put")==0)
