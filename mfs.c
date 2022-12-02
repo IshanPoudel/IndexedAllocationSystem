@@ -1,3 +1,10 @@
+/* Ishan Poudel
+   1001838432
+*/
+
+
+
+
 // The MIT License (MIT)
 // 
 // Copyright (c) 2016, 2017 Trevor Bakker 
@@ -144,7 +151,7 @@ int findFreeBlock()
     {
         if ( strcmp(file_data[i] , "") ==0)
         {
-            printf("I found a free block at %dth index\n" , i);
+            // printf("I found a free block at %dth index\n" , i);
             return i;
 
         }
@@ -161,7 +168,7 @@ int findFreeInodeBlock()
     {
         if (inode_array_ptr[i].in_use==0)
         {
-            printf("I found a free inode block at %dth index to put my file name and array\n" , i);
+            // printf("I found a free inode block at %dth index to put my file name and array\n" , i);
             return i;
         }
 
@@ -176,7 +183,7 @@ int findFreeDirectoryBlock()
   {
     if (directory_entry_array[i].in_use==0)
     {
-      printf("I found a free directory entry at %dth index to put my file and inode number\n" , i);
+    //   printf("I found a free directory entry at %dth index to put my file and inode number\n" , i);
       return i;
     }
 
@@ -285,7 +292,7 @@ void put(char* input )
   
 
   char *output = input;
-  printf("\n I am trying to put the contents of %s into %s \n" , input , output);
+//   printf("\n I am trying to put the contents of %s into %s \n" , input , output);
 
 
 
@@ -364,11 +371,11 @@ void put(char* input )
     int inode_index = findFreeInodeBlock();
     //Link the directory with the inode struct.
     directory_entry_array[dir_index].inode_index=inode_index;
-    printf("I made the index at %d in the inode_array_ptr in use\n" , inode_index);
+    // printf("I made the index at %d in the inode_array_ptr in use\n" , inode_index);
     inode_array_ptr[inode_index].in_use = 1;
 
     FILE *ifp = fopen(input , "r");
-    printf("Reading %d bytes from %s\n" , (int) buf.st_size , input);
+    // printf("Reading %d bytes from %s\n" , (int) buf.st_size , input);
 
     int copy_size = buf.st_size;
 
@@ -429,7 +436,7 @@ void put(char* input )
 
   else
   {
-    printf("ERORR\n");
+    printf("File not found\n");
   }
 
  
@@ -488,7 +495,7 @@ void get(char** token , int token_count)
 
   if (inode_index==-1)
   {
-    printf("File not in disk\n");
+    printf("get error: File not found\n");
     return;
   }
 
@@ -574,7 +581,7 @@ void del(char *filename)
   //if traversed through the file , and the file not found
   if (inode_to_del==-1)
   {
-    printf("File not found\n");
+    printf("del error: File not found\n");
     return;
   }
 
@@ -613,9 +620,7 @@ void del(char *filename)
   
   // instead reset all the blocks to zero before you are adding it to the inode. 
 
-  printf("\n\n After deleting\n\n");
-  printDirectory();
-  
+ 
 
  
 }
@@ -630,7 +635,7 @@ void undel(char *filename)
     if (( (directory_entry_array[i].valid==1) && strcmp(directory_entry_array[i].name , filename) == 0 )   && (directory_entry_array[i].in_use!=1))
     {
       //File can be restored.
-      printf("I found the file %s\n" , filename);
+    //   printf("I found the file %s\n" , filename);
 
       directory_entry_array[i].in_use=1;
       //change the valid sign to anything else than a 1.
@@ -638,12 +643,12 @@ void undel(char *filename)
       //make the inode also in use
       int inode = directory_entry_array[i].inode_index;
       inode_array_ptr[inode].in_use=1;
-      printf("%s has been restored\n" , filename);
+    //   printf("%s has been restored\n" , filename);
       return;
     }
   }
 
-  printf("File not found for deletetion\n");
+  printf("undel: Can not find the file. \n");
   return;
 }
 
@@ -803,12 +808,7 @@ void closeFileSystem()
 
 int main()
 {
-  printf ("Full Directory_entry_array: %d\n" , (int)sizeof(directory_entry_array));
-  printf("Single directory_entry_array value: %d\n" , (int)sizeof(directory_entry_array[0]));
-  printf("Full inode_array: %d \n" , (int)sizeof(inode_array_ptr));
-  printf("Single inode_array  value: %d \n" , (int)sizeof(inode_array_ptr[0]));
-  printf("File data: %d\n" , (int)sizeof(file_data));
-  printf("Single block in file_data: %d\n" , (int)sizeof(file_data[0]));
+  
 
 
 
