@@ -1,0 +1,753 @@
+#include <stdio.h>
+
+
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
+#define MAX_LINKED_LIST_SIZE 65534
+
+int initialized=0;
+int rootNode=0;
+void *arena;
+enum ALGORITHM global_algorithm;
+int current=-99;
+int previous=-99;
+
+
+
+enum TYPE
+{
+    PROCESS , HOLE
+};
+
+struct Node
+{
+    int in_use;
+    int previous;
+    int next;
+
+    size_t size;
+    enum TYPE type;
+
+    void *arena;
+};
+
+char * str_for_enum[] = {"PROCESS" , "HOLE"};
+
+
+
+static struct Node LinkedList[MAX_LINKED_LIST_SIZE];
+
+void printNode(int index)
+{
+    //printf("\n");
+    //printf("LinkedList[%d] is a %s of size %zu\n" , index , str_for_enum[LinkedList[index].type] , LinkedList[index].size);
+    //printf("LinkedList[%d] ------- LinkedList[%d] -------- LinkedList[%d]\n" , LinkedList[index].previous , index , LinkedList[index].next);
+    //printf("LinkedList[%d] is located at %p\n" , index , LinkedList[index].arena );
+    //printf("\n");
+
+}
+
+void printList()
+{
+    int index=rootNode;
+    while((index !=-1) & (LinkedList[index].in_use))
+    {
+        printNode(index);
+        index=LinkedList[index].next;
+
+    }
+}
+
+int findFreeInternalNode()
+{
+    //Find a node that is not in use. 
+    //We do not need ot check for hole , because we will place the hole as it is. 
+
+    for(int i=0; i<MAX_LINKED_LIST_SIZE;i++)
+    {
+        if (LinkedList[i].in_use==0)
+        {
+            return i;
+        }
+    }
+
+    return -1;
+
+}
+
+int mavalloc_init(size_t size , enum ALGORITHM algorithm)
+{
+    //printf("mavalloc_init was called\n");
+    mavalloc_destroy();
+    size_t aligned_size = ALIGN4(size);
+    //allocate pool and save the algorithm
+    arena = malloc(aligned_size);
+    global_algorithm=algorithm;
+
+
+    //Initialize the linkedl sit.
+
+    for (int i=0; i<MAX_LINKED_LIST_SIZE;i++)
+    {
+        LinkedList[i].size=0;
+        LinkedList[i].in_use=0;
+        LinkedList[i].arena=0;
+        LinkedList[i].type=HOLE;
+
+    }
+
+    //printf("The current value of initialized is %d\n" , initialized);
+    //Initialized the root node and point to the arena
+    if(initialized==0)
+    {
+        //printf("i initialized\n");
+        LinkedList[0].arena= arena;
+        LinkedList[0].previous=-1;
+        LinkedList[0].next=-1;
+        LinkedList[0].in_use= 1;
+        LinkedList[0].size = aligned_size;
+        LinkedList[0].type = HOLE;
+        initialized = 1;
+    }
+
+    return 1;
+
+
+
+
+}
+
+int mavalloc_size( )
+{
+    int count=0;
+    for (int i=0; i<MAX_LINKED_LIST_SIZE;i++)
+    {
+        if(LinkedList[i].in_use)
+        {
+            count++;
+        }
+    }
+
+    return count;
+}
+
+void mavalloc_free( void * ptr )
+{
+
+  
+
+  for (int i=0; i<MAX_LINKED_LIST_SIZE;i++)
+  {
+    
+
+    if (ptr==LinkedList[i].arena)
+    {
+        // //printf("Found %p equal to %p\n" , ptr , LinkedList[i].arena);
+        LinkedList[i].type=HOLE;
+        current = LinkedList[i].previous;
+        //printf("Changed LinkedList[%d] at %p to a %s\n" , i , LinkedList[i].arena , str_for_enum[LinkedList[i].type]);
+        // return;
+    }
+  }
+
+  //Start from the rootNOde.
+  int temp=rootNode;
+
+  while(LinkedList[temp].next!=-1)
+  {
+
+    if(LinkedList[temp].type==HOLE && LinkedList[LinkedList[temp].next].type==HOLE && LinkedList[temp].in_use && LinkedList[LinkedList[temp].next].in_use)
+    {
+        // Coleasce them into one. 
+        //printf("Found Linkedlist[%d] and LinkedList[%d] to both be holes. \n" , temp , LinkedList[temp].next);
+
+        
+        int next_hole = LinkedList[temp].next;
+
+        
+        //printf("Changed size of LinkedList[%d] to be %zu+%zu\n" , temp , LinkedList[temp].size ,  LinkedList[next_hole].size);
+        LinkedList[temp].size=LinkedList[temp].size+LinkedList[next_hole].size;
+       
+
+        LinkedList[temp].next = LinkedList[next_hole].next;
+        //printf("LinkedList[%d] now points too %d\n" , temp , LinkedList[next_hole].next);
+
+        // LinkedList[next_hole].next= temp;
+        // LinkedList[temp].type=HOLE;
+
+        LinkedList[next_hole].in_use=0;
+        //Special case if it is the last hole. 
+
+       
+
+
+
+    }
+
+    else
+    {
+         temp = LinkedList[temp].next;
+
+    }
+
+   
+
+  }
+
+  //Check for special condition if two holes at the bottom. 
+  
+
+  //Need to check if I am freeing the head.
+
+  //check if adjacent nodes arefree
+  //if they are then combine them
+
+//   for (int i=0; i<MAX_LINKED_LIST_SIZE-1;i++)
+//   {
+//     if (LinkedList[i].type==HOLE && LinkedList[LinkedList[i].next].type ==HOLE && LinkedList[i].in_use && LinkedList[i+1].in_use)
+//     {
+//         //printf("Found Linkedlist[%d] and LinkedList[%d] to both be holes. \n" , i , i+1);
+//         //combine them to a size LinkedList[i]
+//         //remove LinkedList[i+1].
+//         LinkedList[i].size=LinkedList[i].size+LinkedList[i+1].size;
+//         int next_index = LinkedList[i+1].next;
+//         LinkedList[i].next=next_index;
+//         if (next_index !=-1)
+//         {
+//             LinkedList[next_index].previous=i;
+//         }
+
+//         //Change the arena. 
+//         // LinkedList[i].
+        
+//     }
+//   }
+
+
+
+  return;
+}
+
+void mavalloc_destroy()
+{
+    for (int i=0; i<MAX_LINKED_LIST_SIZE;i++)
+    {
+        LinkedList[i].size=0;
+        LinkedList[i].in_use=0;
+        LinkedList[i].arena=NULL;
+        LinkedList[i].type=HOLE;
+    }
+    free(arena);
+    arena=NULL;
+    initialized=0;
+    rootNode=0;
+    current=-99;
+    previous=-99;
+    
+    
+    return;
+}
+#include <stdio.h>
+
+
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
+#define MAX_LINKED_LIST_SIZE 65534
+
+int initialized=0;
+int rootNode=0;
+void *arena;
+enum ALGORITHM global_algorithm;
+int current=-99;
+int previous=-99;
+
+
+
+enum TYPE
+{
+    PROCESS , HOLE
+};
+
+struct Node
+{
+    int in_use;
+    int previous;
+    int next;
+
+    size_t size;
+    enum TYPE type;
+
+    void *arena;
+};
+
+char * str_for_enum[] = {"PROCESS" , "HOLE"};
+
+
+
+static struct Node LinkedList[MAX_LINKED_LIST_SIZE];
+
+void printNode(int index)
+{
+    //printf("\n");
+    //printf("LinkedList[%d] is a %s of size %zu\n" , index , str_for_enum[LinkedList[index].type] , LinkedList[index].size);
+    //printf("LinkedList[%d] ------- LinkedList[%d] -------- LinkedList[%d]\n" , LinkedList[index].previous , index , LinkedList[index].next);
+    //printf("LinkedList[%d] is located at %p\n" , index , LinkedList[index].arena );
+    //printf("\n");
+
+}
+
+void printList()
+{
+    int index=rootNode;
+    while((index !=-1) & (LinkedList[index].in_use))
+    {
+        printNode(index);
+        index=LinkedList[index].next;
+
+    }
+}
+
+int findFreeInternalNode()
+{
+    //Find a node that is not in use. 
+    //We do not need ot check for hole , because we will place the hole as it is. 
+
+    for(int i=0; i<MAX_LINKED_LIST_SIZE;i++)
+    {
+        if (LinkedList[i].in_use==0)
+        {
+            return i;
+        }
+    }
+
+    return -1;
+
+}
+
+int mavalloc_init(size_t size , enum ALGORITHM algorithm)
+{
+    //printf("mavalloc_init was called\n");
+    mavalloc_destroy();
+    size_t aligned_size = ALIGN4(size);
+    //allocate pool and save the algorithm
+    arena = malloc(aligned_size);
+    global_algorithm=algorithm;
+
+
+    //Initialize the linkedl sit.
+
+    for (int i=0; i<MAX_LINKED_LIST_SIZE;i++)
+    {
+        LinkedList[i].size=0;
+        LinkedList[i].in_use=0;
+        LinkedList[i].arena=0;
+        LinkedList[i].type=HOLE;
+
+    }
+
+    //printf("The current value of initialized is %d\n" , initialized);
+    //Initialized the root node and point to the arena
+    if(initialized==0)
+    {
+        //printf("i initialized\n");
+        LinkedList[0].arena= arena;
+        LinkedList[0].previous=-1;
+        LinkedList[0].next=-1;
+        LinkedList[0].in_use= 1;
+        LinkedList[0].size = aligned_size;
+        LinkedList[0].type = HOLE;
+        initialized = 1;
+    }
+
+    return 1;
+
+
+
+
+}
+
+int mavalloc_size( )
+{
+    int count=0;
+    for (int i=0; i<MAX_LINKED_LIST_SIZE;i++)
+    {
+        if(LinkedList[i].in_use)
+        {
+            count++;
+        }
+    }
+
+    return count;
+}
+
+void mavalloc_free( void * ptr )
+{
+
+  
+
+  for (int i=0; i<MAX_LINKED_LIST_SIZE;i++)
+  {
+    
+
+    if (ptr==LinkedList[i].arena)
+    {
+        // //printf("Found %p equal to %p\n" , ptr , LinkedList[i].arena);
+        LinkedList[i].type=HOLE;
+        current = LinkedList[i].previous;
+        //printf("Changed LinkedList[%d] at %p to a %s\n" , i , LinkedList[i].arena , str_for_enum[LinkedList[i].type]);
+        // return;
+    }
+  }
+
+  //Start from the rootNOde.
+  int temp=rootNode;
+
+  while(LinkedList[temp].next!=-1)
+  {
+
+    if(LinkedList[temp].type==HOLE && LinkedList[LinkedList[temp].next].type==HOLE && LinkedList[temp].in_use && LinkedList[LinkedList[temp].next].in_use)
+    {
+        // Coleasce them into one. 
+        //printf("Found Linkedlist[%d] and LinkedList[%d] to both be holes. \n" , temp , LinkedList[temp].next);
+
+        
+        int next_hole = LinkedList[temp].next;
+
+        
+        //printf("Changed size of LinkedList[%d] to be %zu+%zu\n" , temp , LinkedList[temp].size ,  LinkedList[next_hole].size);
+        LinkedList[temp].size=LinkedList[temp].size+LinkedList[next_hole].size;
+       
+
+        LinkedList[temp].next = LinkedList[next_hole].next;
+        //printf("LinkedList[%d] now points too %d\n" , temp , LinkedList[next_hole].next);
+
+        // LinkedList[next_hole].next= temp;
+        // LinkedList[temp].type=HOLE;
+
+        LinkedList[next_hole].in_use=0;
+        //Special case if it is the last hole. 
+
+       
+
+
+
+    }
+
+    else
+    {
+         temp = LinkedList[temp].next;
+
+    }
+
+   
+
+  }
+
+  //Check for special condition if two holes at the bottom. 
+  
+
+  //Need to check if I am freeing the head.
+
+  //check if adjacent nodes arefree
+  //if they are then combine them
+
+//   for (int i=0; i<MAX_LINKED_LIST_SIZE-1;i++)
+//   {
+//     if (LinkedList[i].type==HOLE && LinkedList[LinkedList[i].next].type ==HOLE && LinkedList[i].in_use && LinkedList[i+1].in_use)
+//     {
+//         //printf("Found Linkedlist[%d] and LinkedList[%d] to both be holes. \n" , i , i+1);
+//         //combine them to a size LinkedList[i]
+//         //remove LinkedList[i+1].
+//         LinkedList[i].size=LinkedList[i].size+LinkedList[i+1].size;
+//         int next_index = LinkedList[i+1].next;
+//         LinkedList[i].next=next_index;
+//         if (next_index !=-1)
+//         {
+//             LinkedList[next_index].previous=i;
+//         }
+
+//         //Change the arena. 
+//         // LinkedList[i].
+        
+//     }
+//   }
+
+
+
+  return;
+}
+
+void mavalloc_destroy()
+{
+    for (int i=0; i<MAX_LINKED_LIST_SIZE;i++)
+    {
+        LinkedList[i].size=0;
+        LinkedList[i].in_use=0;
+        LinkedList[i].arena=NULL;
+        LinkedList[i].type=HOLE;
+    }
+    free(arena);
+    arena=NULL;
+    initialized=0;
+    rootNode=0;
+    current=-99;
+    previous=-99;
+    
+    
+    return;
+}
+#include <stdio.h>
+
+
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
+#define MAX_LINKED_LIST_SIZE 65534
+
+int initialized=0;
+int rootNode=0;
+void *arena;
+enum ALGORITHM global_algorithm;
+int current=-99;
+int previous=-99;
+
+
+
+enum TYPE
+{
+    PROCESS , HOLE
+};
+
+struct Node
+{
+    int in_use;
+    int previous;
+    int next;
+
+    size_t size;
+    enum TYPE type;
+
+    void *arena;
+};
+
+char * str_for_enum[] = {"PROCESS" , "HOLE"};
+
+
+
+static struct Node LinkedList[MAX_LINKED_LIST_SIZE];
+
+void printNode(int index)
+{
+    //printf("\n");
+    //printf("LinkedList[%d] is a %s of size %zu\n" , index , str_for_enum[LinkedList[index].type] , LinkedList[index].size);
+    //printf("LinkedList[%d] ------- LinkedList[%d] -------- LinkedList[%d]\n" , LinkedList[index].previous , index , LinkedList[index].next);
+    //printf("LinkedList[%d] is located at %p\n" , index , LinkedList[index].arena );
+    //printf("\n");
+
+}
+
+void printList()
+{
+    int index=rootNode;
+    while((index !=-1) & (LinkedList[index].in_use))
+    {
+        printNode(index);
+        index=LinkedList[index].next;
+
+    }
+}
+
+int findFreeInternalNode()
+{
+    //Find a node that is not in use. 
+    //We do not need ot check for hole , because we will place the hole as it is. 
+
+    for(int i=0; i<MAX_LINKED_LIST_SIZE;i++)
+    {
+        if (LinkedList[i].in_use==0)
+        {
+            return i;
+        }
+    }
+
+    return -1;
+
+}
+
+int mavalloc_init(size_t size , enum ALGORITHM algorithm)
+{
+    //printf("mavalloc_init was called\n");
+    mavalloc_destroy();
+    size_t aligned_size = ALIGN4(size);
+    //allocate pool and save the algorithm
+    arena = malloc(aligned_size);
+    global_algorithm=algorithm;
+
+
+    //Initialize the linkedl sit.
+
+    for (int i=0; i<MAX_LINKED_LIST_SIZE;i++)
+    {
+        LinkedList[i].size=0;
+        LinkedList[i].in_use=0;
+        LinkedList[i].arena=0;
+        LinkedList[i].type=HOLE;
+
+    }
+
+    //printf("The current value of initialized is %d\n" , initialized);
+    //Initialized the root node and point to the arena
+    if(initialized==0)
+    {
+        //printf("i initialized\n");
+        LinkedList[0].arena= arena;
+        LinkedList[0].previous=-1;
+        LinkedList[0].next=-1;
+        LinkedList[0].in_use= 1;
+        LinkedList[0].size = aligned_size;
+        LinkedList[0].type = HOLE;
+        initialized = 1;
+    }
+
+    return 1;
+
+
+
+
+}
+
+int mavalloc_size( )
+{
+    int count=0;
+    for (int i=0; i<MAX_LINKED_LIST_SIZE;i++)
+    {
+        if(LinkedList[i].in_use)
+        {
+            count++;
+        }
+    }
+
+    return count;
+}
+
+void mavalloc_free( void * ptr )
+{
+
+  
+
+  for (int i=0; i<MAX_LINKED_LIST_SIZE;i++)
+  {
+    
+
+    if (ptr==LinkedList[i].arena)
+    {
+        // //printf("Found %p equal to %p\n" , ptr , LinkedList[i].arena);
+        LinkedList[i].type=HOLE;
+        current = LinkedList[i].previous;
+        //printf("Changed LinkedList[%d] at %p to a %s\n" , i , LinkedList[i].arena , str_for_enum[LinkedList[i].type]);
+        // return;
+    }
+  }
+
+  //Start from the rootNOde.
+  int temp=rootNode;
+
+  while(LinkedList[temp].next!=-1)
+  {
+
+    if(LinkedList[temp].type==HOLE && LinkedList[LinkedList[temp].next].type==HOLE && LinkedList[temp].in_use && LinkedList[LinkedList[temp].next].in_use)
+    {
+        // Coleasce them into one. 
+        //printf("Found Linkedlist[%d] and LinkedList[%d] to both be holes. \n" , temp , LinkedList[temp].next);
+
+        
+        int next_hole = LinkedList[temp].next;
+
+        
+        //printf("Changed size of LinkedList[%d] to be %zu+%zu\n" , temp , LinkedList[temp].size ,  LinkedList[next_hole].size);
+        LinkedList[temp].size=LinkedList[temp].size+LinkedList[next_hole].size;
+       
+
+        LinkedList[temp].next = LinkedList[next_hole].next;
+        //printf("LinkedList[%d] now points too %d\n" , temp , LinkedList[next_hole].next);
+
+        // LinkedList[next_hole].next= temp;
+        // LinkedList[temp].type=HOLE;
+
+        LinkedList[next_hole].in_use=0;
+        //Special case if it is the last hole. 
+
+       
+
+
+
+    }
+
+    else
+    {
+         temp = LinkedList[temp].next;
+
+    }
+
+   
+
+  }
+
+  //Check for special condition if two holes at the bottom. 
+  
+
+  //Need to check if I am freeing the head.
+
+  //check if adjacent nodes arefree
+  //if they are then combine them
+
+//   for (int i=0; i<MAX_LINKED_LIST_SIZE-1;i++)
+//   {
+//     if (LinkedList[i].type==HOLE && LinkedList[LinkedList[i].next].type ==HOLE && LinkedList[i].in_use && LinkedList[i+1].in_use)
+//     {
+//         //printf("Found Linkedlist[%d] and LinkedList[%d] to both be holes. \n" , i , i+1);
+//         //combine them to a size LinkedList[i]
+//         //remove LinkedList[i+1].
+//         LinkedList[i].size=LinkedList[i].size+LinkedList[i+1].size;
+//         int next_index = LinkedList[i+1].next;
+//         LinkedList[i].next=next_index;
+//         if (next_index !=-1)
+//         {
+//             LinkedList[next_index].previous=i;
+//         }
+
+//         //Change the arena. 
+//         // LinkedList[i].
+        
+//     }
+//   }
+
+
+
+  return;
+}
+
+void mavalloc_destroy()
+{
+    for (int i=0; i<MAX_LINKED_LIST_SIZE;i++)
+    {
+        LinkedList[i].size=0;
+        LinkedList[i].in_use=0;
+        LinkedList[i].arena=NULL;
+        LinkedList[i].type=HOLE;
+    }
+    free(arena);
+    arena=NULL;
+    initialized=0;
+    rootNode=0;
+    current=-99;
+    previous=-99;
+    
+    
+    return;
+}

@@ -1,45 +1,26 @@
-// The MIT License (MIT)
-// 
-// Copyright (c) 2016, 2017 Trevor Bakker 
-// 
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-// 
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
+// Stat struct contains the metadata about a file. 
+// dev_t st_dev - device on which the file resides. 
+// ino_t sr_ino - inode number of the file,
+// mode_t st-mode - protection
+// nlink_t st_nlink - number of hard links,
+// uid_t st_uid - userId of owner.
+// gid_t st_gid - groupID of owner. 
 
-#define _GNU_SOURCE
+//ino_t st_ino - inode number
+//off_t st_size - total_size
+//blkcnt_t st_blocks - blocksize for file system i/o.
+
+
+//How to have inodes for all 
+//Associate each file name with a index number
+//Have 2d arrays. At the index number , it ocntains all the file indexes for each of the index nodes.
 
 #include <stdio.h>
-#include <unistd.h>
-#include <sys/wait.h>
 #include <stdlib.h>
-#include <errno.h>
-#include <string.h>
-#include <signal.h>
+#include <unistd.h>
 #include <sys/stat.h>
+#include <string.h>
 
-
-#define WHITESPACE " \t\n"      // We want to split our command line up into tokens
-                                // so we need to define what delimits our tokens.
-                                // In this case  white space
-                                // will separate the tokens on our command line
-
-#define MAX_COMMAND_SIZE 255    // The maximum command-line size
-
-#define MAX_NUM_ARGUMENTS 5     // Mav shell only supports five arguments
 
 
 #define NUM_BLOCKS 512
@@ -47,24 +28,11 @@
 #define MAX_NUM_OF_BLOCKS_PER_FILE 20
 #define MAX_NUM_OF_FILES 125
 
+char file_data[NUM_BLOCKS][BLOCK_SIZE];
 
-
-//contains file name and their inode number
-struct directory_entry
-{
-  char * name;
-  int in_use;
-  int inode_index;
-  int size;
-};
-
-//Manually increase the size of the directory . 
-struct directory_entry directory_entry_array[MAX_NUM_OF_FILES];
-
-//contains the inode number and the number of blocks that it is using.
 struct Node 
 {
-    
+    char *name;
     int blocks[MAX_NUM_OF_BLOCKS_PER_FILE];
     int in_use;
 
@@ -73,39 +41,32 @@ struct Node
 //decalre an array to store inodes
 struct Node inode_array_ptr[MAX_NUM_OF_FILES];
 
-//declare a directory to store the blocks.
 
-char file_data[NUM_BLOCKS][BLOCK_SIZE];
 
 
 void initialize()
 {
-  //Initalize the directory 
-  for(int i=0; i<NUM_BLOCKS;i++)
-  {
-    strcpy(file_data[i] , "");
-  }
+    //initialize the directory.
+    for(int i=0; i<NUM_BLOCKS;i++)
+    {
+        // file_data[i]=strdup("NULL");
+        strcpy(file_data[i] , "");
+        
+        
+    }
+    //Set some blocks as not free for testing.
+    strcpy(file_data[5] , "TEST");
+    strcpy(file_data[10] , "TEST");
+    strcpy(file_data[7] , "TEST");
 
-//Set some blocks as not free for testing.
-  strcpy(file_data[5] , "TEST");
-  strcpy(file_data[10] , "TEST");
-  strcpy(file_data[7] , "TEST");
 
-
-  //Initialize the inode_array_ptr
-  for (int i=0; i<MAX_NUM_OF_FILES;i++)
-  {
-    inode_array_ptr[i].in_use=0;
-  }
-
-  //Initialize the directory_entry
-
-  for (int i=0; i<MAX_NUM_OF_FILES;i++)
-  {
-
-    directory_entry_array[i].in_use=0;
-  }
+    //Initialize the inode_array_ptr
+    for (int i=0; i<MAX_NUM_OF_FILES;i++)
+    {
+        inode_array_ptr[i].in_use=0;
+    }
 }
+
 
 
 
@@ -135,51 +96,27 @@ int findFreeInodeBlock()
     {
         if (inode_array_ptr[i].in_use==0)
         {
-            printf("I found a free inode block at %dth index to put my file name and array\n" , i);
-            return i;
+            printf("Found a free_inode block at %d\n" , i);
+            return 1;
         }
 
     }
     return -1;
 }
 
-int findFreeDirectoryBlock()
-{
-
-  for (int i=0 ; i<MAX_NUM_OF_FILES;i++)
-  {
-    if (directory_entry_array[i].in_use==0)
-    {
-      printf("I found a free directory entry at %dth index to put my file and inode number\n" , i);
-      return i;
-    }
-
-    
-  }
-
-  return -1;
-}
-
 void printBlock()
 {
-
-  printf("\n\nThe following block indexes are occupied.\n\n");
-    
+    printf("I am here\n");
 
     
 
     for(int i=0; i<NUM_BLOCKS;i++)
     {
-      if (strcmp(file_data[i] , "")!=0)
-      {
-        printf(" %d " , i);
-
-      }
-       
-       
+        // file_data[i]=strdup("NULL");
+        strcpy(file_data[i] , "");
+        
+        printf("%s\n" , file_data[i]);
     }
-
-    printf("\n");
 
     return;
 
@@ -197,377 +134,187 @@ void printInodeBlock()
     {
       if (inode_array_ptr[i].in_use==1)
       {
-        printf("\nFor inode at index %d \n" , i);
-        //Get size of array
-        int size = sizeof(inode_array_ptr[i].blocks)/sizeof(inode_array_ptr[i].blocks[0]);
-        for (int j=0; j<size;j++)
-        {
-          printf(" %d " , inode_array_ptr[i].blocks[j]);
-        }
+        printf("%s\n" , inode_array_ptr[i].name);
 
       }
        
         
     }
-    printf("\n");
 
     return;
 
 }
 
-void printDirectory()
+int main(int argc , char *argv[])
 {
-  printf("\n\nContents of the directory block\n\n");
 
-  for (int i=0; i<MAX_NUM_OF_FILES;i++)
-  {
-    if (directory_entry_array[i].in_use==1)
+    initialize();
+
+    
+
+    
+
+
+
+    //declare variables
+    int status;
+    struct stat buf;
+
+    // 3 args , program name , file to copy from , file to copy to, 
+
+    if(argc!=3)
     {
-      printf("Name :%s , Inode Number: %d \n" , directory_entry_array[i].name , directory_entry_array[i].inode_index);
+        printf("Incorrect number of parameters\n");
+        return -1;
     }
-  }
-  printf("\n");
-}
 
-void put(char* input )
-{
-  
+    status = stat(argv[1] , &buf);
+    //fills in the bust struct with file parameters. 
 
-  char *output = input;
-  printf("\n I am trying to put the contents of %s into %s \n" , input , output);
-
-
-
-  //declare variables
-  int status;
-  struct stat buf;
-
-  status = stat(input , &buf);
-
-  if (status!=-1)
-  {
-    //Find free directory_block
-    int dir_index = findFreeDirectoryBlock();
-    directory_entry_array[dir_index].in_use=1;
-    directory_entry_array[dir_index].name=strdup(output);
-    directory_entry_array[dir_index].size = (int) buf.st_size;
-   
-
-    //Find free inode block
-
-    int inode_index = findFreeInodeBlock();
-    //Link the directory with the inode struct.
-    directory_entry_array[dir_index].inode_index=inode_index;
-    printf("I made the index at %d in the inode_array_ptr in use\n" , inode_index);
-    inode_array_ptr[inode_index].in_use = 1;
-
-    FILE *ifp = fopen(input , "r");
-    printf("Reading %d bytes from %s\n" , (int) buf.st_size , input);
-
-    int copy_size = buf.st_size;
-
-    int offset = 0;
-    int block_index = findFreeBlock();
-
-    //nEED TO COPY TO DIFFERENT FILE FORMATS. 
-
-    int inode_block_counter = 0;
-    //To increment struct inode's block array when a new block is read.
-
-    while (copy_size>0)
+    if (status !=-1)
     {
-       fseek( ifp, offset, SEEK_SET );
+       //We get the paramwters of the file.
+       //We read from the input file.
+       
+       int inode_block_index = findFreeInodeBlock();
+       inode_array_ptr[inode_block_index].in_use =1;
+       inode_array_ptr[inode_block_index].name = strdup(argv[2]);
+       printf("The name of the file is %s\n" , inode_array_ptr[inode_block_index].name );
 
-       //Read block_size and put it in the file
-       int bytes  = fread( file_data[block_index], BLOCK_SIZE, 1, ifp );
 
-       if(bytes==0 && !feof (ifp))
+       
+       FILE *ifp = fopen(argv[1] , "r");
+       printf("Reading %d bytes from %s\n" , (int) buf.st_size , argv[1]);
+
+       //Save the total size of the buf. 
+       int copy_size = buf.st_size;
+
+       //We want to copy and write in chunks of BLOCK_SIZE. 
+       //So to do this , we are using fseek to move along out file stream in chunks of BLOCK_SIZE
+       //we will copy our bytes , increment out file pointer by block_size and repear. 
+
+       //We want to copy and write in chunks of BLOCK_SIZE . So to do this , we are going to use 
+       //fseek to move along our file in chunks of Block_size . 
+       //We will copy bytes , increment out file pointer by BLOCK_SIZE and repet.
+       int offset = 0;
+       
+       //nlock_index will keep us pointin to the area that we will read from or write to
+       int block_index = findFreeBlock();
+
+
+       while(copy_size>0)
        {
-        printf("An error occured reading from the input file.\n");
-        return;
+
+        
+
+        //Index into the input file by offset number of bytes . Initially offset is set to zeor , so we copy BLOCK_SIZE
+        fseek(ifp , offset , SEEK_SET);
+
+        //Read b.ock size number of bytes from input file and stroe them in out data array
+        int bytes = fread(file_data[block_index] , BLOCK_SIZE , 1 , ifp);
+
+        if(bytes==0 && !feof(ifp))
+        {
+            printf("An error occured reading from the input file\n");
+            return -1;
+        }
+
+        //Clear the EOF file flag.
+        copy_size -= BLOCK_SIZE;
+        //nEXT TIME WE ARE usin fseek we are reading the next block size.
+        offset+= BLOCK_SIZE;
+
+        //INcrement the index into block array
+        block_index=findFreeBlock();
+
+        
+
+
        }
 
-       //At this point , add the block index to the inode.
-       //Need a pointer to know how many blocks are needed.
-       //Make sure that the block_index is free. 
-      //  printf("i read from the file and added the block index %d at the struct.array ar position %d\n" , block_index , inode_block_counter);
-       inode_array_ptr[inode_index].blocks[inode_block_counter]=block_index;
-       inode_block_counter++;
+       fclose(ifp);
+
+       //The above function is the put command , reading from file and storing in you array
+    //    ------------------------------------------------------
+       //the function below is to open a new output file and write the same data to. 
+       FILE *ofp = fopen(argv[2] , "w");
+
+       if(ofp==NULL)
+       {
+        printf("Could not open the file: %s\n" , argv[2]);
+        perror("Opening output file returned");
+        return -1;
+       }
+
+       //Initialize our offsers and pointers , just like we did above when reading from the file. 
+       block_index=0;
+       copy_size=buf.st_size;
+       offset=0;
 
 
-       //clear the eof flag.
-       clearerr(ifp);
+        printf("Writing %d bytes to %s\n", (int) buf . st_size, argv[2] );
 
-       //Reduce block_copy size.
-       copy_size-=BLOCK_SIZE;
 
-       offset += BLOCK_SIZE;
+        //We are using copy_size as a count to determine when we have copied enough bytes to the outp\ut file. 
+        //Each time through the loop , except the last time , we will copy BLOCK_SIZE number of bytes from our stored data 
+        // to the file fp , then we will increment the offset into the file. 
+        //on the last one , instead of copying BLOCK_SIZE number of bytes we just copy however is left . 
 
-       block_index=findFreeBlock();
+        while(copy_size>0)
+        {
+            int num_bytes;
+
+            //if the remaining number of bytes we need to copy is less than BLOCK_SIZE then only copy the amount that remains. 
+            //If we copied BLOCK_SIZE , number of bytes we'd end up with garbage. 
+
+
+            if(copy_size<BLOCK_SIZE)
+            {
+                num_bytes=copy_size;
+
+            }
+            else
+            {
+                num_bytes=BLOCK_SIZE;
+            }
+            // num_bytes=BLOCK_SIZE;
+
+            //we need to get the block_index value from the inode once we are looking for free blocks.
+            
+
+            fwrite(file_data[block_index] , num_bytes , 1 , ofp);
+
+            copy_size-= BLOCK_SIZE;
+            offset += BLOCK_SIZE;
+            block_index++;
+
+
+            fseek(ofp , offset , SEEK_SET);
+        }
+
+
+       
 
 
 
     }
-
-    fclose(ifp);
-
-    printf("\nCurrent state:\n");
-    printDirectory();
-
-    printInodeBlock();
-
-    
-    
-
-  }
-
-  else
-  {
-    printf("ERORR\n");
-  }
-
- 
+    else
+    {
+        printf("Unable to open the file%s\n" , argv[1]);
+        perror("Opening the input file");
+        return -1;
+    }
 
 
+    //similar functionlaity to your put command. 
+
+    return 0;
 
 
 }
 
-void get(char** token , int token_count)
+// 2-3 - free inode block and inode blocl
+// 3-5 - blocks for the data
+//5 -135 
 
-{
-  
-  //See number of args , before doing stuff.
-  printf("%d\n" , token_count);
-  //Need to check if string not empty
-  char *input_file = token[1];
-  char *output_file;
-  if (token[2]==NULL)
-  {   
-    output_file = token[1];
-    printf("Only two args\n");
-  }
-  else
-  {
-    output_file = token[2];
-  }
-
-  //Now do your thing.
-  //Read the file from the inode.
-
-  //Get the inode. 
-  int inode_index=-1;
-  int file_size=0;
-  for (int i=0; i<MAX_NUM_OF_FILES;i++)
-  {
-    if (strcmp(directory_entry_array[i].name , input_file)==0)
-    {
-      inode_index=directory_entry_array[i].inode_index;
-      file_size = directory_entry_array[i].size;
-      break;
-
-    }
-  }
-
-  if (inode_index==-1)
-  {
-    printf("File not in disk");
-    return;
-  }
-
-  //Read the blocks from the inode. 
-  // int  block[MAX_NUM_OF_BLOCKS_PER_FILE ] = inode_array_ptr[inode_index].blocks;
-  // to read the block
-  int block_counter = 0;
-
-  //Open the second file. 
-  FILE *ofp;
-  ofp = fopen(output_file , "w");
-
-  if(ofp==NULL)
-  {
-  printf("Could not open the file: %s\n" , output_file);
-  perror("Opening output file returned");
-  return;
-  }
-
-  int block_index=inode_array_ptr[inode_index].blocks[block_counter++];
-  int copy_size = file_size;
-  
-  int offset = 0;
-
-  printf("Writing %d bytes to %s\n", file_size, output_file);
-
-  while (copy_size>0)
-
-  {
-    int num_bytes;
-    
-    //To check when the thing we want to copy is less than BLOCK_SIZE
-    if( copy_size < BLOCK_SIZE )
-    {
-      num_bytes = copy_size;
-    }
-    else 
-    {
-      num_bytes = BLOCK_SIZE;
-    }
-
-    fwrite( file_data[block_index], num_bytes, 1, ofp ); 
-    copy_size -= BLOCK_SIZE;
-    offset    += BLOCK_SIZE;
-
-    block_index = inode_array_ptr[inode_index].blocks[block_counter++];
-    fseek( ofp, offset, SEEK_SET );
-
-
-  }
-
-  fclose(ofp);
-  return;
-}
-
-void del(char *filename)
-{
-  //You get the name of the file 
-
-  int inode_to_del = -1;
-  for (int i=0; i<MAX_NUM_OF_FILES;i++)
-  {
-    if (directory_entry_array[i].in_use == 1)
-    {
-      if (strcmp(directory_entry_array[i].name , filename)==0)
-      {
-        //If you find a match , get the inode_number so we can delete it from the inode struct array
-        inode_to_del=directory_entry_array[i].inode_index;
-        //Set the direcotry to be usable again.
-        directory_entry_array[i].in_use=0;
-        break;
-        
-      }
-    }
-  }
-
-  //if traversed through the file , and the file not found
-  if (inode_to_del==-1)
-  {
-    printf("File not found\n");
-    return;
-  }
-
-  
-
-  //Get the inode number.
-  //Make sure to set it in use.
-  inode_array_ptr[inode_to_del].in_use=0;
-
-   //Traverse the directory block .
-  //Set all the block to zero or ""
-
-  
-
-  //Reset all the blocks to zero.
-  for (int j=0; j<MAX_NUM_OF_BLOCKS_PER_FILE;j++)
-  {
-    //Get the index of the block. If not zero , then it is a block_number which we must delete.
-    //It contains a block we must free
-    // [2 ,3 ,  4, 5 , 8 , 0 , 0 , 0 , 0 ]
-    if(inode_array_ptr[inode_to_del].blocks[j]!=0)
-    {
-
-      strcpy(file_data[inode_array_ptr[inode_to_del].blocks[j]] ,"" );
-
-      //set the block to zero for further use.
-      inode_array_ptr[inode_to_del].blocks[j]=0;
-      //[0 , 3 , 4 , 5 , 8 , 0 , 0 , 0 ,0]
-
-    }
-  }
-
-  printf("\n\n After deleting\n\n");
-  printDirectory();
-  printInodeBlock();
-  printBlock();
-
- 
-}
-
-int main()
-{
-
-  char * cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
-
-  initialize();
-
-  while( 1 )
-  {
-    // Print out the mfs prompt
-    printf ("mfs> ");
-
-    // Read the command from the commandline.  The
-    // maximum command that will be read is MAX_COMMAND_SIZE
-    // This while command will wait here until the user
-    // inputs something since fgets returns NULL when there
-    // is no input
-    while( !fgets (cmd_str, MAX_COMMAND_SIZE, stdin) );
-
-    /* Parse input */
-    char *token[MAX_NUM_ARGUMENTS];
-
-    int   token_count = 0;                                 
-                                                           
-    // Pointer to point to the token
-    // parsed by strsep
-    char *arg_ptr;                                         
-                                                           
-    char *working_str  = strdup( cmd_str );                
-
-    // we are going to move the working_str pointer so
-    // keep track of its original value so we can deallocate
-    // the correct amount at the end
-    char *working_root = working_str;
-
-    // Tokenize the input stringswith whitespace used as the delimiter
-    while ( ( (arg_ptr = strsep(&working_str, WHITESPACE ) ) != NULL) && 
-              (token_count<MAX_NUM_ARGUMENTS))
-    {
-      token[token_count] = strndup( arg_ptr, MAX_COMMAND_SIZE );
-      if( strlen( token[token_count] ) == 0 )
-      {
-        token[token_count] = NULL;
-      }
-        token_count++;
-    }
-
-    // Now print the tokenized input as a debug check
-    // \TODO Remove this code and replace with your shell functionality
-
-    int token_index  = 0;
-    for( token_index = 0; token_index < token_count; token_index ++ ) 
-    {
-      printf("token[%d] = %s\n", token_index, token[token_index] );  
-     
-
-      
-    }
-
-    if (strcmp(token[0] , "put")==0)
-    {
-      put( token[1] );
-    }
-
-    else if (strcmp(token[0] , "del")==0)
-    {
-      del(token[1]);
-    }
-
-    else if (strcmp(token[0] , "get")==0)
-    {
-      get(token , token_count);
-    }
-
-    free( working_root );
-
-  }
-  return 0;
-}
+//create , open , df first. 

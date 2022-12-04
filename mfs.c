@@ -124,8 +124,7 @@ void initialize()
   }
 }
 
-//When you save and open , initialize the directory_entry_array with the output. 
-//When you save and open, initialize the inode_array_ptr with the data file.
+
 
 int getdf()
 {
@@ -145,13 +144,13 @@ int getdf()
 
 int findFreeBlock()
 {
-    //itwrate thorugh out file_data and see which one is empty . 
+    //iterate thorugh out file_data and see which one is empty . 
 
     for(int i=5; i<NUM_BLOCKS;i++)
     {
         if ( strcmp(file_data[i] , "") ==0)
         {
-            // printf("I found a free block at %dth index\n" , i);
+           
             return i;
 
         }
@@ -168,7 +167,7 @@ int findFreeInodeBlock()
     {
         if (inode_array_ptr[i].in_use==0)
         {
-            // printf("I found a free inode block at %dth index to put my file name and array\n" , i);
+            
             return i;
         }
 
@@ -183,7 +182,7 @@ int findFreeDirectoryBlock()
   {
     if (directory_entry_array[i].in_use==0)
     {
-    //   printf("I found a free directory entry at %dth index to put my file and inode number\n" , i);
+    
       return i;
     }
 
@@ -196,7 +195,7 @@ int findFreeDirectoryBlock()
 void printBlock()
 {
 
-  printf("\n\nThe following block indexes are occupied.\n\n");
+ 
     
 
     
@@ -292,7 +291,7 @@ void put(char* input )
   
 
   char *output = input;
-//   printf("\n I am trying to put the contents of %s into %s \n" , input , output);
+
 
 
 
@@ -304,8 +303,7 @@ void put(char* input )
   int size =(int) buf.st_size ;
   int free_size = getdf();
 
-//   printf("Size of the file is: %d\n" , size);
-//   printf("Free size is : %d\n" , free_size);
+
 
   if (free_size<size)
   {
